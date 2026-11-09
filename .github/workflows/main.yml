@@ -1,21 +1,989 @@
 name: Build Iqra Floating APK
-on: [push, workflow_dispatch]
+
+
+
+on:
+
+  push:
+
+  workflow_dispatch:
+
+
+
 jobs:
+
   build:
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Extract Zip
-        run: unzip -o "*.zip" -d .
-      - uses: actions/setup-java@v4
+
+      - name: Generate Android Project Files
+
+        run: |
+
+          cat << 'EOF_FILE' > settings.gradle
+
+          pluginManagement {
+
+              repositories {
+
+                  google()
+
+                  mavenCentral()
+
+                  gradlePluginPortal()
+
+              }
+
+          }
+
+          dependencyResolutionManagement {
+
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+
+              repositories {
+
+                  google()
+
+                  mavenCentral()
+
+              }
+
+          }
+
+          rootProject.name = "IqraFloatingReader"
+
+          include ':app'
+
+          EOF_FILE
+
+          cat << 'EOF_FILE' > build.gradle
+
+          plugins {
+
+              id 'com.android.application' version '8.2.2' apply false
+
+          }
+
+          EOF_FILE
+
+          cat << 'EOF_FILE' > gradle.properties
+
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+
+          android.useAndroidX=true
+
+          EOF_FILE
+
+          mkdir -p app
+
+          cat << 'EOF_FILE' > app/build.gradle
+
+          plugins {
+
+              id 'com.android.application'
+
+          }
+
+          
+
+          android {
+
+              namespace 'com.iqra.floating'
+
+              compileSdk 34
+
+          
+
+              defaultConfig {
+
+                  applicationId "com.iqra.floating"
+
+                  minSdk 23
+
+                  targetSdk 34
+
+                  versionCode 150
+
+                  versionName "1.5.0"
+
+              }
+
+          
+
+              buildTypes {
+
+                  release {
+
+                      minifyEnabled false
+
+                      signingConfig signingConfigs.debug
+
+                  }
+
+                  debug {
+
+                      signingConfig signingConfigs.debug
+
+                  }
+
+              }
+
+              compileOptions {
+
+                  sourceCompatibility JavaVersion.VERSION_17
+
+                  targetCompatibility JavaVersion.VERSION_17
+
+              }
+
+          }
+
+          
+
+          dependencies {
+
+              implementation 'androidx.core:core:1.12.0'
+
+              implementation 'androidx.media:media:1.7.0'
+
+          }
+
+          EOF_FILE
+
+          mkdir -p app/src/main
+
+          cat << 'EOF_FILE' > app/src/main/AndroidManifest.xml
+
+          <?xml version="1.0" encoding="utf-8"?>
+
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+          
+
+              <uses-permission android:name="android.permission.INTERNET" />
+
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+          
+
+              <application
+
+                  android:allowBackup="true"
+
+                  android:icon="@drawable/ic_launcher"
+
+                  android:label="@string/app_name"
+
+                  android:supportsRtl="true"
+
+                  android:usesCleartextTraffic="true"
+
+                  android:theme="@style/MainAppTheme">
+
+          
+
+                  <activity
+
+                      android:name=".MainActivity"
+
+                      android:exported="true"
+
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+
+                      <intent-filter>
+
+                          <action android:name="android.intent.action.MAIN" />
+
+                          <category android:name="android.intent.category.LAUNCHER" />
+
+                      </intent-filter>
+
+                  </activity>
+
+          
+
+                  <activity
+
+                      android:name=".FloatingReaderActivity"
+
+                      android:label="@string/process_text_label"
+
+                      android:theme="@style/FloatingDialogTheme"
+
+                      android:excludeFromRecents="true"
+
+                      android:taskAffinity=""
+
+                      android:launchMode="singleInstance"
+
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+
+                      android:exported="true">
+
+                      <intent-filter android:label="@string/process_text_label">
+
+                          <action android:name="android.intent.action.PROCESS_TEXT" />
+
+                          <category android:name="android.intent.category.DEFAULT" />
+
+                          <data android:mimeType="text/plain" />
+
+                      </intent-filter>
+
+                      <intent-filter android:label="@string/process_text_label">
+
+                          <action android:name="android.intent.action.SEND" />
+
+                          <category android:name="android.intent.category.DEFAULT" />
+
+                          <data android:mimeType="text/plain" />
+
+                      </intent-filter>
+
+                  </activity>
+
+          
+
+                  <service
+
+                      android:name=".IqraMediaService"
+
+                      android:foregroundServiceType="mediaPlayback"
+
+                      android:exported="false" />
+
+          
+
+              </application>
+
+          </manifest>
+
+          EOF_FILE
+
+          mkdir -p app/src/main/res/values
+
+          cat << 'EOF_FILE' > app/src/main/res/values/strings.xml
+
+          <?xml version="1.0" encoding="utf-8"?>
+
+          <resources>
+
+              <string name="app_name">اقرأ</string>
+
+              <string name="process_text_label">اقرأ لي 🔊</string>
+
+          </resources>
+
+          EOF_FILE
+
+          mkdir -p app/src/main/res/values
+
+          cat << 'EOF_FILE' > app/src/main/res/values/styles.xml
+
+          <?xml version="1.0" encoding="utf-8"?>
+
+          <resources>
+
+              <style name="FloatingDialogTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
+
+                  <item name="android:windowIsFloating">true</item>
+
+                  <item name="android:windowIsTranslucent">true</item>
+
+                  <item name="android:windowBackground">@android:color/transparent</item>
+
+                  <item name="android:backgroundDimEnabled">false</item>
+
+                  <item name="android:windowNoTitle">true</item>
+
+              </style>
+
+              <style name="MainAppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+
+                  <item name="android:statusBarColor">#102A43</item>
+
+              </style>
+
+          </resources>
+
+          EOF_FILE
+
+          mkdir -p app/src/main/res/drawable
+
+          cat << 'EOF_FILE' > app/src/main/res/drawable/ic_launcher.xml
+
+          <?xml version="1.0" encoding="utf-8"?>
+
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+
+              android:width="108dp"
+
+              android:height="108dp"
+
+              android:viewportWidth="40"
+
+              android:viewportHeight="40">
+
+              <path
+
+                  android:fillColor="#102A43"
+
+                  android:pathData="M0,0h40v40h-40z"/>
+
+              <path
+
+                  android:strokeColor="#85D7CF"
+
+                  android:strokeWidth="2.5"
+
+                  android:pathData="M8,9.5A4.5,4.5 0,0 1,12.5 5H20v25h-7.5A4.5,4.5 0 0 0,8 34.5v-25Z"/>
+
+              <path
+
+                  android:strokeColor="#85D7CF"
+
+                  android:strokeWidth="2.5"
+
+                  android:pathData="M32,9.5A4.5,4.5 0 0 0,27.5 5H20v25h7.5a4.5,4.5 0 0 1,4.5 4.5v-25Z"/>
+
+          </vector>
+
+          EOF_FILE
+
+          mkdir -p app/src/main/java/com/iqra/floating
+
+          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/IqraMediaService.java
+
+          package com.iqra.floating;
+
+
+
+          import android.app.Notification;
+
+          import android.app.NotificationChannel;
+
+          import android.app.NotificationManager;
+
+          import android.app.PendingIntent;
+
+          import android.app.Service;
+
+          import android.content.Intent;
+
+          import android.os.Build;
+
+          import android.os.IBinder;
+
+          import android.speech.tts.TextToSpeech;
+
+          import androidx.core.app.NotificationCompat;
+
+          import java.util.Locale;
+
+
+
+          public class IqraMediaService extends Service {
+
+              public static final String CHANNEL_ID = "iqra_playback_channel";
+
+              private TextToSpeech tts;
+
+              private boolean isReady = false;
+
+
+
+              @Override
+
+              public void onCreate() {
+
+                  super.onCreate();
+
+                  createNotificationChannel();
+
+                  tts = new TextToSpeech(this, status -> {
+
+                      if (status == TextToSpeech.SUCCESS) {
+
+                          tts.setLanguage(new Locale("ar"));
+
+                          isReady = true;
+
+                      }
+
+                  });
+
+              }
+
+
+
+              @Override
+
+              public int onStartCommand(Intent intent, int flags, int startId) {
+
+                  String text = intent != null ? intent.getStringExtra("text") : null;
+
+                  if (text == null) text = "اقرأ: جارٍ الاستماع...";
+
+
+
+                  Notification notification = buildMediaNotification(text);
+
+                  startForeground(101, notification);
+
+
+
+                  if (isReady && intent != null && intent.getBooleanExtra("speak", false)) {
+
+                      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "iqra_bg");
+
+                  }
+
+                  return START_NOT_STICKY;
+
+              }
+
+
+
+              private Notification buildMediaNotification(String preview) {
+
+                  Intent openIntent = new Intent(this, MainActivity.class);
+
+                  PendingIntent pi = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_IMMUTABLE);
+
+
+
+                  return new NotificationCompat.Builder(this, CHANNEL_ID)
+
+                          .setContentTitle("اقرأ — مشغّل القراءة الصوتي")
+
+                          .setContentText(preview.length() > 50 ? preview.substring(0, 50) + "..." : preview)
+
+                          .setSmallIcon(R.drawable.ic_launcher)
+
+                          .setContentIntent(pi)
+
+                          .setOngoing(true)
+
+                          .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+                          .setPriority(NotificationCompat.PRIORITY_LOW)
+
+                          .build();
+
+              }
+
+
+
+              private void createNotificationChannel() {
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+                      NotificationChannel ch = new NotificationChannel(
+
+                              CHANNEL_ID,
+
+                              "مشغّل الصوت في الخلفية",
+
+                              NotificationManager.IMPORTANCE_LOW
+
+                      );
+
+                      ch.setDescription("أزرار التحكم بالصوت في الإشعارات وشاشة القفل");
+
+                      NotificationManager nm = getSystemService(NotificationManager.class);
+
+                      if (nm != null) nm.createNotificationChannel(ch);
+
+                  }
+
+              }
+
+
+
+              @Override
+
+              public void onDestroy() {
+
+                  if (tts != null) {
+
+                      tts.stop();
+
+                      tts.shutdown();
+
+                  }
+
+                  super.onDestroy();
+
+              }
+
+
+
+              @Override
+
+              public IBinder onBind(Intent intent) {
+
+                  return null;
+
+              }
+
+          }
+
+          EOF_FILE
+
+          mkdir -p app/src/main/java/com/iqra/floating
+
+          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/WebViewBridge.java
+
+          package com.iqra.floating;
+
+          
+
+          import android.app.Activity;
+
+          import android.content.Intent;
+
+          import android.speech.tts.TextToSpeech;
+
+          import android.webkit.JavascriptInterface;
+
+          import java.util.Locale;
+
+          
+
+          public class WebViewBridge {
+
+              private final Activity activity;
+
+              private final String initialText;
+
+              private final boolean isFloating;
+
+              private TextToSpeech tts;
+
+              private boolean ttsReady = false;
+
+          
+
+              public WebViewBridge(Activity activity, String initialText, boolean isFloating) {
+
+                  this.activity = activity;
+
+                  this.initialText = initialText != null ? initialText : "";
+
+                  this.isFloating = isFloating;
+
+                  this.tts = new TextToSpeech(activity.getApplicationContext(), status -> {
+
+                      if (status == TextToSpeech.SUCCESS) {
+
+                          int res = tts.setLanguage(new Locale("ar"));
+
+                          ttsReady = (res != TextToSpeech.LANG_MISSING_DATA && res != TextToSpeech.LANG_NOT_SUPPORTED);
+
+                      }
+
+                  });
+
+              }
+
+          
+
+              @JavascriptInterface
+
+              public String getInitialText() {
+
+                  return initialText;
+
+              }
+
+          
+
+              @JavascriptInterface
+
+              public boolean isFloatingWindow() {
+
+                  return isFloating;
+
+              }
+
+          
+
+              @JavascriptInterface
+
+              public void closeFloatingWindow() {
+
+                  activity.runOnUiThread(activity::finish);
+
+              }
+
+          
+
+              @JavascriptInterface
+
+              public void speakAndroidTts(String text, float rate) {
+
+                  if (tts != null && ttsReady) {
+
+                      tts.setSpeechRate(rate > 0 ? rate : 1.0f);
+
+                      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "iqra_utt");
+
+                  }
+
+              }
+
+          
+
+              @JavascriptInterface
+
+              public void stopAndroidTts() {
+
+                  if (tts != null) {
+
+                      tts.stop();
+
+                  }
+
+              }
+
+          
+
+              public void shutdown() {
+
+                  if (tts != null) {
+
+                      tts.stop();
+
+                      tts.shutdown();
+
+                  }
+
+              }
+
+          }
+
+          EOF_FILE
+
+          mkdir -p app/src/main/java/com/iqra/floating
+
+          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/MainActivity.java
+
+          package com.iqra.floating;
+
+          
+
+          import android.annotation.SuppressLint;
+
+          import android.app.Activity;
+
+          import android.os.Bundle;
+
+          import android.webkit.WebChromeClient;
+
+          import android.webkit.WebSettings;
+
+          import android.webkit.WebView;
+
+          import android.webkit.WebViewClient;
+
+          
+
+          public class MainActivity extends Activity {
+
+              private WebView webView;
+
+              private WebViewBridge bridge;
+
+          
+
+              @SuppressLint("SetJavaScriptEnabled")
+
+              @Override
+
+              protected void onCreate(Bundle savedInstanceState) {
+
+                  super.onCreate(savedInstanceState);
+
+                  webView = new WebView(this);
+
+                  setContentView(webView);
+
+          
+
+                  WebSettings settings = webView.getSettings();
+
+                  settings.setJavaScriptEnabled(true);
+
+                  settings.setDomStorageEnabled(true);
+
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+
+                  settings.setAllowFileAccess(true);
+
+                  settings.setAllowContentAccess(true);
+
+                  settings.setAllowUniversalAccessFromFileURLs(true);
+
+          
+
+                  bridge = new WebViewBridge(this, "", false);
+
+                  webView.addJavascriptInterface(bridge, "AndroidBridge");
+
+                  webView.setWebViewClient(new WebViewClient());
+
+                  webView.setWebChromeClient(new WebChromeClient());
+
+                  webView.loadUrl("file:///android_asset/www/index.html");
+
+              }
+
+          
+
+              @Override
+
+              protected void onDestroy() {
+
+                  if (bridge != null) bridge.shutdown();
+
+                  super.onDestroy();
+
+              }
+
+          }
+
+          EOF_FILE
+
+          mkdir -p app/src/main/java/com/iqra/floating
+
+          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/FloatingReaderActivity.java
+
+          package com.iqra.floating;
+
+          
+
+          import android.annotation.SuppressLint;
+
+          import android.app.Activity;
+
+          import android.content.Intent;
+
+          import android.graphics.Color;
+
+          import android.graphics.drawable.ColorDrawable;
+
+          import android.os.Bundle;
+
+          import android.util.DisplayMetrics;
+
+          import android.view.Gravity;
+
+          import android.view.Window;
+
+          import android.view.WindowManager;
+
+          import android.webkit.WebChromeClient;
+
+          import android.webkit.WebSettings;
+
+          import android.webkit.WebView;
+
+          import android.webkit.WebViewClient;
+
+          
+
+          public class FloatingReaderActivity extends Activity {
+
+              private WebView webView;
+
+              private WebViewBridge bridge;
+
+          
+
+              @SuppressLint("SetJavaScriptEnabled")
+
+              @Override
+
+              protected void onCreate(Bundle savedInstanceState) {
+
+                  super.onCreate(savedInstanceState);
+
+                  requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+          
+
+                  Window window = getWindow();
+
+                  if (window != null) {
+
+                      window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                      DisplayMetrics dm = new DisplayMetrics();
+
+                      getWindowManager().getDefaultDisplay().getMetrics(dm);
+
+                      WindowManager.LayoutParams params = window.getAttributes();
+
+                      params.width = (int) (dm.widthPixels * 0.95);
+
+                      params.height = (int) (dm.heightPixels * 0.55);
+
+                      params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+
+                      params.y = 24;
+
+                      window.setAttributes(params);
+
+                  }
+
+          
+
+                  String selectedText = extractIncomingText(getIntent());
+
+          
+
+                  webView = new WebView(this);
+
+                  webView.setBackgroundColor(Color.TRANSPARENT);
+
+                  setContentView(webView);
+
+          
+
+                  WebSettings settings = webView.getSettings();
+
+                  settings.setJavaScriptEnabled(true);
+
+                  settings.setDomStorageEnabled(true);
+
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+
+                  settings.setAllowFileAccess(true);
+
+                  settings.setAllowContentAccess(true);
+
+                  settings.setAllowUniversalAccessFromFileURLs(true);
+
+          
+
+                  bridge = new WebViewBridge(this, selectedText, true);
+
+                  webView.addJavascriptInterface(bridge, "AndroidBridge");
+
+                  webView.setWebViewClient(new WebViewClient());
+
+                  webView.setWebChromeClient(new WebChromeClient());
+
+                  webView.loadUrl("file:///android_asset/www/index.html?floating=1");
+
+              }
+
+          
+
+              @Override
+
+              protected void onNewIntent(Intent intent) {
+
+                  super.onNewIntent(intent);
+
+                  setIntent(intent);
+
+                  String newText = extractIncomingText(intent);
+
+                  if (webView != null && newText != null && !newText.isEmpty()) {
+
+                      String escaped = newText.replace("\\", "\\\\").replace("'", "\\'")
+
+                                              .replace("\n", "\\n").replace("\r", "");
+
+                      webView.evaluateJavascript("window.receiveFloatingText && window.receiveFloatingText('" + escaped + "');", null);
+
+                  }
+
+              }
+
+          
+
+              private String extractIncomingText(Intent intent) {
+
+                  if (intent == null) return "";
+
+                  CharSequence processText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT);
+
+                  if (processText != null) return processText.toString();
+
+                  String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+
+                  if (sharedText != null) return sharedText;
+
+                  return "";
+
+              }
+
+          
+
+              @Override
+
+              protected void onDestroy() {
+
+                  if (bridge != null) bridge.shutdown();
+
+                  super.onDestroy();
+
+              }
+
+          }
+
+          EOF_FILE
+
+          mkdir -p app/src/main/assets/www
+
+          cp -f ../../iqra_mobile_app.html app/src/main/assets/www/index.html 2>/dev/null || true
+
+
+
+      - name: Set up JDK 17
+
+        uses: actions/setup-java@v4
+
         with:
+
           java-version: '17'
+
           distribution: 'temurin'
-      - uses: gradle/actions/setup-gradle@v3
+
+
+
+      - name: Setup Gradle
+
+        uses: gradle/actions/setup-gradle@v3
+
         with:
+
           gradle-version: '8.5'
-      - run: gradle assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
+
+
+
+      - name: Build Debug APK
+
+        run: gradle assembleDebug --no-daemon
+
+
+
+      - name: Upload Ready-to-Install APK
+
+        uses: actions/upload-artifact@v4
+
         with:
+
           name: Iqra-Floating-Android-APK
+
           path: app/build/outputs/apk/debug/app-debug.apk

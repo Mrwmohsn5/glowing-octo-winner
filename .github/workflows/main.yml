@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate Android Project Files
+      - name: Generate Complete Android Project Files (v2.2)
         run: |
           cat << 'EOF_FILE' > settings.gradle
           pluginManagement {
@@ -28,15 +28,18 @@ jobs:
           rootProject.name = "IqraFloatingReader"
           include ':app'
           EOF_FILE
+
           cat << 'EOF_FILE' > build.gradle
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF_FILE
+
           cat << 'EOF_FILE' > gradle.properties
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           EOF_FILE
+
           mkdir -p app
           cat << 'EOF_FILE' > app/build.gradle
           plugins {
@@ -51,8 +54,8 @@ jobs:
                   applicationId "com.iqra.floating"
                   minSdk 23
                   targetSdk 34
-                  versionCode 150
-                  versionName "1.5.0"
+                  versionCode 220
+                  versionName "2.2.0"
               }
           
               buildTypes {
@@ -75,7 +78,68 @@ jobs:
               implementation 'androidx.media:media:1.7.0'
           }
           EOF_FILE
-          mkdir -p app/src/main
+
+          mkdir -p app/src/main/res/values
+          cat << 'EOF_FILE' > app/src/main/res/values/strings.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">اقرأ</string>
+              <string name="process_text_label">اقرأ لي 🔊</string>
+              <string name="accessibility_service_label">خدمة قراءة الشاشة لتطبيق اقرأ</string>
+              <string name="accessibility_service_description">تتيح قراءة النصوص الظاهرة على الشاشة داخل التطبيقات المحمية التي لا تدعم النسخ المباشر.</string>
+          </resources>
+          EOF_FILE
+
+          cat << 'EOF_FILE' > app/src/main/res/values/styles.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="FloatingDialogTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
+                  <item name="android:windowIsFloating">true</item>
+                  <item name="android:windowIsTranslucent">true</item>
+                  <item name="android:windowBackground">@android:color/transparent</item>
+                  <item name="android:backgroundDimEnabled">false</item>
+                  <item name="android:windowNoTitle">true</item>
+              </style>
+              <style name="MainAppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <item name="android:statusBarColor">#102A43</item>
+              </style>
+          </resources>
+          EOF_FILE
+
+          mkdir -p app/src/main/res/xml
+          cat << 'EOF_FILE' > app/src/main/res/xml/accessibility_service_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+              android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+              android:accessibilityFeedbackType="feedbackSpoken"
+              android:notificationTimeout="100"
+              android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
+              android:canRetrieveWindowContent="true"
+              android:description="@string/accessibility_service_description" />
+          EOF_FILE
+
+          mkdir -p app/src/main/res/drawable
+          cat << 'EOF_FILE' > app/src/main/res/drawable/ic_launcher.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="40"
+              android:viewportHeight="40">
+              <path
+                  android:fillColor="#102A43"
+                  android:pathData="M0,0h40v40h-40z"/>
+              <path
+                  android:strokeColor="#85D7CF"
+                  android:strokeWidth="2.5"
+                  android:pathData="M8,9.5A4.5,4.5 0,0 1,12.5 5H20v25h-7.5A4.5,4.5 0,0 0,8 34.5v-25Z"/>
+              <path
+                  android:strokeColor="#85D7CF"
+                  android:strokeWidth="2.5"
+                  android:pathData="M32,9.5A4.5,4.5 0,0 0,27.5 5H20v25h7.5a4.5,4.5 0,0 1,4.5 4.5v-25Z"/>
+          </vector>
+          EOF_FILE
+
           cat << 'EOF_FILE' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -124,156 +188,80 @@ jobs:
                           <data android:mimeType="text/plain" />
                       </intent-filter>
                   </activity>
-          
+
                   <service
-                      android:name=".IqraMediaService"
-                      android:foregroundServiceType="mediaPlayback"
-                      android:exported="false" />
+                      android:name=".ScreenTextService"
+                      android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.accessibilityservice.AccessibilityService" />
+                      </intent-filter>
+                      <meta-data
+                          android:name="android.accessibilityservice"
+                          android:resource="@xml/accessibility_service_config" />
+                  </service>
           
               </application>
           </manifest>
           EOF_FILE
-          mkdir -p app/src/main/res/values
-          cat << 'EOF_FILE' > app/src/main/res/values/strings.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <string name="app_name">اقرأ</string>
-              <string name="process_text_label">اقرأ لي 🔊</string>
-          </resources>
-          EOF_FILE
-          mkdir -p app/src/main/res/values
-          cat << 'EOF_FILE' > app/src/main/res/values/styles.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="FloatingDialogTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
-                  <item name="android:windowIsFloating">true</item>
-                  <item name="android:windowIsTranslucent">true</item>
-                  <item name="android:windowBackground">@android:color/transparent</item>
-                  <item name="android:backgroundDimEnabled">false</item>
-                  <item name="android:windowNoTitle">true</item>
-              </style>
-              <style name="MainAppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-                  <item name="android:statusBarColor">#102A43</item>
-              </style>
-          </resources>
-          EOF_FILE
-          mkdir -p app/src/main/res/drawable
-          cat << 'EOF_FILE' > app/src/main/res/drawable/ic_launcher.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="40"
-              android:viewportHeight="40">
-              <path
-                  android:fillColor="#102A43"
-                  android:pathData="M0,0h40v40h-40z"/>
-              <path
-                  android:strokeColor="#85D7CF"
-                  android:strokeWidth="2.5"
-                  android:pathData="M8,9.5A4.5,4.5 0,0 1,12.5 5H20v25h-7.5A4.5,4.5 0 0 0,8 34.5v-25Z"/>
-              <path
-                  android:strokeColor="#85D7CF"
-                  android:strokeWidth="2.5"
-                  android:pathData="M32,9.5A4.5,4.5 0 0 0,27.5 5H20v25h7.5a4.5,4.5 0 0 1,4.5 4.5v-25Z"/>
-          </vector>
-          EOF_FILE
+
           mkdir -p app/src/main/java/com/iqra/floating
-          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/IqraMediaService.java
+          cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/ScreenTextService.java
           package com.iqra.floating;
 
-          import android.app.Notification;
-          import android.app.NotificationChannel;
-          import android.app.NotificationManager;
-          import android.app.PendingIntent;
-          import android.app.Service;
-          import android.content.Intent;
-          import android.os.Build;
-          import android.os.IBinder;
-          import android.speech.tts.TextToSpeech;
-          import androidx.core.app.NotificationCompat;
-          import java.util.Locale;
+          import android.accessibilityservice.AccessibilityService;
+          import android.view.accessibility.AccessibilityEvent;
+          import android.view.accessibility.AccessibilityNodeInfo;
 
-          public class IqraMediaService extends Service {
-              public static final String CHANNEL_ID = "iqra_playback_channel";
-              private TextToSpeech tts;
-              private boolean isReady = false;
+          public class ScreenTextService extends AccessibilityService {
+              private static ScreenTextService instance;
 
               @Override
-              public void onCreate() {
-                  super.onCreate();
-                  createNotificationChannel();
-                  tts = new TextToSpeech(this, status -> {
-                      if (status == TextToSpeech.SUCCESS) {
-                          tts.setLanguage(new Locale("ar"));
-                          isReady = true;
+              public void onServiceConnected() {
+                  super.onServiceConnected();
+                  instance = this;
+              }
+
+              public static String getVisibleScreenText() {
+                  if (instance == null) return "";
+                  AccessibilityNodeInfo root = instance.getRootInActiveWindow();
+                  if (root == null) return "";
+                  StringBuilder sb = new StringBuilder();
+                  extractText(root, sb);
+                  return sb.toString().trim();
+              }
+
+              private static void extractText(AccessibilityNodeInfo node, StringBuilder sb) {
+                  if (node == null) return;
+                  if (node.getText() != null) {
+                      String t = node.getText().toString().trim();
+                      if (t.length() > 2) {
+                          sb.append(t).append("\n\n");
                       }
-                  });
+                  }
+                  for (int i = 0; i < node.getChildCount(); i++) {
+                      extractText(node.getChild(i), sb);
+                  }
               }
 
               @Override
-              public int onStartCommand(Intent intent, int flags, int startId) {
-                  String text = intent != null ? intent.getStringExtra("text") : null;
-                  if (text == null) text = "اقرأ: جارٍ الاستماع...";
+              public void onAccessibilityEvent(AccessibilityEvent event) {}
 
-                  Notification notification = buildMediaNotification(text);
-                  startForeground(101, notification);
-
-                  if (isReady && intent != null && intent.getBooleanExtra("speak", false)) {
-                      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "iqra_bg");
-                  }
-                  return START_NOT_STICKY;
-              }
-
-              private Notification buildMediaNotification(String preview) {
-                  Intent openIntent = new Intent(this, MainActivity.class);
-                  PendingIntent pi = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_IMMUTABLE);
-
-                  return new NotificationCompat.Builder(this, CHANNEL_ID)
-                          .setContentTitle("اقرأ — مشغّل القراءة الصوتي")
-                          .setContentText(preview.length() > 50 ? preview.substring(0, 50) + "..." : preview)
-                          .setSmallIcon(R.drawable.ic_launcher)
-                          .setContentIntent(pi)
-                          .setOngoing(true)
-                          .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                          .setPriority(NotificationCompat.PRIORITY_LOW)
-                          .build();
-              }
-
-              private void createNotificationChannel() {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationChannel ch = new NotificationChannel(
-                              CHANNEL_ID,
-                              "مشغّل الصوت في الخلفية",
-                              NotificationManager.IMPORTANCE_LOW
-                      );
-                      ch.setDescription("أزرار التحكم بالصوت في الإشعارات وشاشة القفل");
-                      NotificationManager nm = getSystemService(NotificationManager.class);
-                      if (nm != null) nm.createNotificationChannel(ch);
-                  }
-              }
+              @Override
+              public void onInterrupt() {}
 
               @Override
               public void onDestroy() {
-                  if (tts != null) {
-                      tts.stop();
-                      tts.shutdown();
-                  }
+                  instance = null;
                   super.onDestroy();
-              }
-
-              @Override
-              public IBinder onBind(Intent intent) {
-                  return null;
               }
           }
           EOF_FILE
-          mkdir -p app/src/main/java/com/iqra/floating
+
           cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/WebViewBridge.java
           package com.iqra.floating;
           
           import android.app.Activity;
-          import android.content.Intent;
           import android.speech.tts.TextToSpeech;
           import android.webkit.JavascriptInterface;
           import java.util.Locale;
@@ -311,6 +299,11 @@ jobs:
               public void closeFloatingWindow() {
                   activity.runOnUiThread(activity::finish);
               }
+
+              @JavascriptInterface
+              public String readScreenText() {
+                  return ScreenTextService.getVisibleScreenText();
+              }
           
               @JavascriptInterface
               public void speakAndroidTts(String text, float rate) {
@@ -335,7 +328,7 @@ jobs:
               }
           }
           EOF_FILE
-          mkdir -p app/src/main/java/com/iqra/floating
+
           cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/MainActivity.java
           package com.iqra.floating;
           
@@ -380,7 +373,7 @@ jobs:
               }
           }
           EOF_FILE
-          mkdir -p app/src/main/java/com/iqra/floating
+
           cat << 'EOF_FILE' > app/src/main/java/com/iqra/floating/FloatingReaderActivity.java
           package com.iqra.floating;
           
@@ -415,11 +408,11 @@ jobs:
                       DisplayMetrics dm = new DisplayMetrics();
                       getWindowManager().getDefaultDisplay().getMetrics(dm);
                       WindowManager.LayoutParams params = window.getAttributes();
-                      params.width = (int) (dm.widthPixels * 0.95);
-                      params.height = (int) (dm.heightPixels * 0.55);
-                      params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                      params.y = 24;
+                      params.width = WindowManager.LayoutParams.MATCH_PARENT;
+                      params.height = WindowManager.LayoutParams.MATCH_PARENT;
+                      params.gravity = Gravity.CENTER;
                       window.setAttributes(params);
+                      window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
                   }
           
                   String selectedText = extractIncomingText(getIntent());
@@ -471,8 +464,183 @@ jobs:
               }
           }
           EOF_FILE
+
           mkdir -p app/src/main/assets/www
-          cp -f ../../iqra_mobile_app.html app/src/main/assets/www/index.html 2>/dev/null || true
+          cat << 'EOF_HTML' > app/src/main/assets/www/index.html
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <meta name="theme-color" content="#102a43">
+            <title>اقرأ — الإصدار 2.2 المحدث</title>
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+            <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+            <style>
+              body { font-family: 'Cairo', Tahoma, sans-serif; background: #f4f8f9; color: #20364a; margin: 0; }
+              .active-chunk-card { border-color: #0f8b8d !important; background-color: #e4f5f3 !important; }
+            </style>
+          </head>
+          <body class="min-h-screen flex flex-col pb-20">
+            <header class="sticky top-0 z-30 bg-[#102a43] text-white shadow-md px-4 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h1 class="font-extrabold text-lg">اقرأ</h1>
+                <span class="text-[11px] bg-[#0f8b8d]/40 text-[#94e2d9] px-2 py-0.5 rounded-full font-bold">الإصدار 2.2 المحدث</span>
+              </div>
+              <span class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">أوفلاين بدون نت 100%</span>
+            </header>
+
+            <main class="max-w-xl w-full mx-auto px-3.5 pt-4 space-y-4">
+              <div class="rounded-2xl bg-gradient-to-br from-[#102a43] to-[#1d5370] text-white p-4 shadow-md space-y-3">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-sm font-extrabold">القارئ العربي الذكي والنافذة العائمة الشفافة</h2>
+                  <button id="showFloatBtn" type="button" class="px-3 py-1.5 rounded-lg bg-[#94e2d9] text-[#102a43] font-extrabold text-xs">إظهار النافذة العائمة 🔊</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="pasteBtn" type="button" class="py-2 rounded-xl bg-white/15 font-bold text-xs">📋 لصق الحافظة</button>
+                  <button id="sampleBtn" type="button" class="py-2 rounded-xl bg-white/15 font-bold text-xs">📖 نص تجريبي</button>
+                </div>
+              </div>
+
+              <div class="rounded-2xl bg-white border border-[#d8e4e9] p-3.5 shadow-sm space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-[#f4f8f9] border border-[#d8e4e9]">
+                  <div class="flex items-center gap-1.5">
+                    <button id="cleanLinesBtn" type="button" class="h-8 px-2.5 rounded-lg bg-white border border-[#d8e4e9] text-[#102a43] font-bold text-xs">🧹 دمج وضغط السطور</button>
+                    <button id="clearSpacesBtn" type="button" class="h-8 px-2 rounded-lg bg-white border border-[#d8e4e9] text-[#6d8190] font-bold text-xs">مسح الفراغات</button>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <select id="gestureSel" class="h-8 px-2 rounded-lg border border-[#d8e4e9] bg-white text-xs font-bold">
+                      <option value="">🎭 اختر إيماءة...</option>
+                      <option value="[وقفة قصيرة]">⏱ [وقفة قصيرة]</option>
+                      <option value="[تنهيدة]">💨 [تنهيدة]</option>
+                      <option value="[همس هادئ]">🤫 [همس هادئ]</option>
+                      <option value="[حماس وتعجب]">🔥 [حماس وتعجب]</option>
+                      <option value="[تأكيد وحزم]">💪 [تأكيد وحزم]</option>
+                      <option value="[استفهام وتساؤل]">❓ [استفهام وتساؤل]</option>
+                    </select>
+                    <button id="addGestureBtn" type="button" class="h-8 px-2.5 rounded-lg bg-[#0f8b8d] text-white font-bold text-xs">+ إدراج</button>
+                  </div>
+                </div>
+
+                <textarea id="mainText" rows="6" class="w-full rounded-xl border border-[#d8e4e9] p-3 text-sm leading-relaxed"></textarea>
+
+                <div class="p-2 rounded-xl bg-[#e4f5f3] text-[#076b70] text-xs font-bold flex items-center justify-between">
+                  <span>✅ تم تصحيح نطق كلمة «قَرِيب / قَرِيبًا / القَرِيب» تلقائيًا</span>
+                  <select id="rateSel" class="h-8 px-2 rounded-lg border border-[#0f8b8d]/30 bg-white text-xs font-bold">
+                    <option value="0.75">0.75x</option>
+                    <option value="1" selected>1.0x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                  </select>
+                </div>
+
+                <div class="flex gap-2">
+                  <button id="playMainBtn" type="button" class="flex-1 h-12 rounded-xl bg-[#0f8b8d] text-white font-extrabold text-sm">▶ تشغيل فوري بصوت الهاتف (بدون نت)</button>
+                  <button id="stopMainBtn" type="button" class="h-12 px-4 rounded-xl bg-rose-50 border border-rose-200 text-[#b64545] font-bold text-xs">■ إيقاف</button>
+                </div>
+              </div>
+            </main>
+
+            <button id="miniBubble" type="button" class="fixed z-50 hidden w-14 h-14 rounded-full bg-[#102a43]/85 backdrop-blur-md text-white border-2 border-[#7fe1d4] shadow-2xl items-center justify-center text-2xl" style="bottom: 100px; left: 16px; touch-action: none;">🔊</button>
+
+            <div id="floatCard" class="fixed z-50 w-[300px] max-w-[90vw] hidden rounded-2xl bg-[#102a43]/75 backdrop-blur-xl border border-[#7fe1d4]/40 text-white shadow-2xl p-3 space-y-2" style="bottom: 90px; left: 16px;">
+              <div id="floatHeader" class="flex items-center justify-between border-b border-white/10 pb-2 cursor-grab" style="touch-action: none;">
+                <span class="text-xs font-extrabold text-[#94e2d9]">🔊 اقرأ العائم الشفاف (اسحبني)</span>
+                <div class="flex items-center gap-1">
+                  <button id="minBubbleBtn" type="button" class="px-2 py-0.5 rounded bg-white/15 text-[10px] font-bold">— تصغير</button>
+                  <button id="closeFloatBtn" type="button" class="w-6 h-6 rounded-full bg-rose-500/40 text-xs font-bold">✕</button>
+                </div>
+              </div>
+              <div id="floatPreview" class="max-h-16 overflow-y-auto rounded-lg bg-black/30 p-2 text-[11px] leading-relaxed text-[#e4f5f3]"></div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button id="readScreenBtn" type="button" class="h-8 rounded-lg bg-[#0f8b8d] text-white font-bold text-[10px]">📺 قراءة الشاشة</button>
+                <button id="playFloatBtn" type="button" class="h-8 rounded-lg bg-white/15 text-white font-bold text-[10px]">▶ تشغيل / إيقاف</button>
+              </div>
+            </div>
+
+            <script>
+              const $ = id => document.getElementById(id);
+              const SAMPLE = "مرحبًا بك في تطبيق اقرأ المحدّث، والذي سيصبح رفيقك في وقت قريب جدًا. تم ضبط نطق كلمة قريب وقريبًا وفي القريب العاجل بالتشكيل الصحيح.";
+              $('mainText').value = SAMPLE;
+
+              function fixArabicPronunciation(raw) {
+                let t = String(raw || '');
+                t = t.replace(/(^|[\s،,.;:؟!«"(\[ـ])(ال)?ق[\u064B-\u0652]*ر[\u064B-\u0652]*ي[\u064B-\u0652]*ب(ا|اً|ة|ه|ها|هم|ك|نا)?(?=$|[\s،,.;:؟!»")\]]))?/gu, (m, pre = '', al = '', suf = '') => {
+                  const base = al ? 'القَرِيب' : 'قَرِيب';
+                  if (suf === 'ا' || suf === 'اً') return pre + base + 'ًا';
+                  if (suf === 'ة') return pre + base + 'َة';
+                  return pre + base;
+                });
+                t = t.replace(/\[وقفة قصيرة\]/g, '... ').replace(/\[تنهيدة\]/g, '... هاه ... ').replace(/\[حماس وتعجب\]/g, ' ! ');
+                return t;
+              }
+
+              function speakNow(text) {
+                const prepared = fixArabicPronunciation(text || $('mainText').value);
+                if (!prepared.trim()) return;
+                $('floatPreview').textContent = prepared;
+                const rate = parseFloat($('rateSel').value) || 1.0;
+                if (window.AndroidBridge && typeof window.AndroidBridge.speakAndroidTts === 'function') {
+                  window.AndroidBridge.speakAndroidTts(prepared, rate);
+                } else if ('speechSynthesis' in window) {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance(prepared);
+                  u.lang = 'ar-SA';
+                  u.rate = rate;
+                  window.speechSynthesis.speak(u);
+                }
+              }
+
+              $('playMainBtn').onclick = () => speakNow($('mainText').value);
+              $('playFloatBtn').onclick = () => speakNow($('mainText').value);
+              $('stopMainBtn').onclick = () => {
+                if (window.AndroidBridge) window.AndroidBridge.stopAndroidTts();
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+              };
+              $('sampleBtn').onclick = () => { $('mainText').value = SAMPLE; };
+              $('pasteBtn').onclick = async () => {
+                try { $('mainText').value = await navigator.clipboard.readText(); } catch(e){}
+              };
+              $('cleanLinesBtn').onclick = () => {
+                $('mainText').value = $('mainText').value.split(/\n\s*\n+/).map(p => p.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim()).join('\n\n');
+              };
+              $('clearSpacesBtn').onclick = () => {
+                $('mainText').value = $('mainText').value.replace(/\r?\n+/g, ' ').replace(/\s+/g, ' ').trim();
+              };
+              $('addGestureBtn').onclick = () => {
+                const g = $('gestureSel').value;
+                if (!g) return;
+                const ta = $('mainText');
+                const s = ta.selectionStart || 0;
+                ta.value = ta.value.slice(0, s) + ' ' + g + ' ' + ta.value.slice(ta.selectionEnd || 0);
+              };
+              $('showFloatBtn').onclick = () => { $('floatCard').classList.remove('hidden'); $('floatPreview').textContent = $('mainText').value; };
+              $('closeFloatBtn').onclick = () => { $('floatCard').classList.add('hidden'); };
+              $('minBubbleBtn').onclick = () => { $('floatCard').classList.add('hidden'); $('miniBubble').classList.remove('hidden'); $('miniBubble').classList.add('flex'); };
+              $('miniBubble').onclick = () => { $('miniBubble').classList.add('hidden'); $('floatCard').classList.remove('hidden'); };
+              $('readScreenBtn').onclick = () => {
+                if (window.AndroidBridge && window.AndroidBridge.readScreenText) {
+                  const st = window.AndroidBridge.readScreenText();
+                  if (st) { $('mainText').value = st; speakNow(st); }
+                }
+              };
+
+              window.receiveFloatingText = function(txt) {
+                if (txt) {
+                  $('mainText').value = txt;
+                  $('floatCard').classList.remove('hidden');
+                  speakNow(txt);
+                }
+              };
+
+              if (window.AndroidBridge && window.AndroidBridge.getInitialText) {
+                const initTxt = window.AndroidBridge.getInitialText();
+                if (initTxt) window.receiveFloatingText(initTxt);
+              }
+            </script>
+          </body>
+          </html>
+          EOF_HTML
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

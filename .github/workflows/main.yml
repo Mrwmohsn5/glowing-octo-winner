@@ -1,1320 +1,657 @@
 name: Build Iqra Floating APK
-
 on: [push, workflow_dispatch]
 
-
-
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Create Gradle and Manifest Files
-
         run: |
-
           mkdir -p app/src/main/java/com/iqra/floating
-
           mkdir -p app/src/main/res/values
-
           mkdir -p app/src/main/res/xml
-
           mkdir -p app/src/main/assets
 
-
-
           cat << 'EOF' > settings.gradle
-
           pluginManagement {
-
               repositories {
-
                   google()
-
                   mavenCentral()
-
                   gradlePluginPortal()
-
               }
-
           }
-
           dependencyResolutionManagement {
-
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-
               repositories {
-
                   google()
-
                   mavenCentral()
-
               }
-
           }
-
           rootProject.name = "IqraFloatingApp"
-
           include ':app'
-
           EOF
-
-
 
           cat << 'EOF' > build.gradle
-
           plugins {
-
               id 'com.android.application' version '8.2.2' apply false
-
           }
-
           EOF
-
-
 
           cat << 'EOF' > gradle.properties
-
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-
           android.useAndroidX=true
-
           EOF
-
-
 
           cat << 'EOF' > app/build.gradle
-
           plugins {
-
               id 'com.android.application'
-
           }
-
           android {
-
               namespace 'com.iqra.floating'
-
               compileSdk 34
-
               defaultConfig {
-
                   applicationId "com.iqra.floating"
-
                   minSdk 24
-
                   targetSdk 34
-
                   versionCode 3
-
                   versionName "3.0"
-
               }
-
               buildTypes {
-
                   debug { minifyEnabled false }
-
               }
-
               compileOptions {
-
                   sourceCompatibility JavaVersion.VERSION_17
-
                   targetCompatibility JavaVersion.VERSION_17
-
               }
-
           }
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/res/values/strings.xml
-
-          <?xml version="1.0" encoding="utf-8"?>
-
           <resources>
-
               <string name="app_name">اقرأ العائم</string>
-
               <string name="process_text_label">اقرأ لي 🔊</string>
-
               <string name="accessibility_desc">قارئ الشاشة العائم وإزالة المسافات بين السطور</string>
-
           </resources>
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/res/values/styles.xml
-
-          <?xml version="1.0" encoding="utf-8"?>
-
           <resources>
-
               <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-
                   <item name="android:statusBarColor">#0f273d</item>
-
               </style>
-
               <style name="FloatingDialogTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
-
                   <item name="android:windowIsTranslucent">true</item>
-
                   <item name="android:windowBackground">@android:color/transparent</item>
-
                   <item name="android:backgroundDimEnabled">false</item>
-
                   <item name="android:windowCloseOnTouchOutside">true</item>
-
               </style>
-
           </resources>
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/res/xml/accessibility_service_config.xml
-
-          <?xml version="1.0" encoding="utf-8"?>
-
           <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-
               android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
-
               android:accessibilityFeedbackType="feedbackGeneric"
-
               android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
-
               android:canRetrieveWindowContent="true"
-
               android:description="@string/accessibility_desc"
-
               android:notificationTimeout="100" />
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/AndroidManifest.xml
-
-          <?xml version="1.0" encoding="utf-8"?>
-
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
               <uses-permission android:name="android.permission.INTERNET" />
-
               <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
               <application
-
                   android:allowBackup="true"
-
                   android:icon="@android:drawable/ic_btn_speak_now"
-
                   android:label="@string/app_name"
-
                   android:supportsRtl="true"
-
                   android:theme="@style/AppTheme">
-
                   <activity
-
                       android:name=".MainActivity"
-
                       android:exported="true"
-
                       android:launchMode="singleTask"
-
                       android:configChanges="orientation|screenSize|keyboardHidden">
-
                       <intent-filter>
-
                           <action android:name="android.intent.action.MAIN" />
-
                           <category android:name="android.intent.category.LAUNCHER" />
-
                       </intent-filter>
-
                       <intent-filter>
-
                           <action android:name="android.intent.action.SEND" />
-
                           <category android:name="android.intent.category.DEFAULT" />
-
                           <data android:mimeType="text/plain" />
-
                       </intent-filter>
-
                   </activity>
-
                   <activity
-
                       android:name=".FloatingReaderActivity"
-
                       android:exported="true"
-
                       android:label="@string/process_text_label"
-
                       android:theme="@style/FloatingDialogTheme"
-
                       android:excludeFromRecents="true">
-
                       <intent-filter>
-
                           <action android:name="android.intent.action.PROCESS_TEXT" />
-
                           <category android:name="android.intent.category.DEFAULT" />
-
                           <data android:mimeType="text/plain" />
-
                       </intent-filter>
-
                   </activity>
-
                   <service android:name=".FloatingOverlayService" android:enabled="true" android:exported="false" />
-
                   <service
-
                       android:name=".ScreenTextService"
-
                       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-
                       android:exported="true"
-
                       android:label="قارئ شاشة اقرأ العائم">
-
                       <intent-filter>
-
                           <action android:name="android.accessibilityservice.AccessibilityService" />
-
                       </intent-filter>
-
                       <meta-data
-
                           android:name="android.accessibilityservice"
-
                           android:resource="@xml/accessibility_service_config" />
-
                   </service>
-
               </application>
-
           </manifest>
-
           EOF
-
-
+          sed -i "/<?xml/d" app/src/main/res/values/*.xml app/src/main/res/xml/*.xml app/src/main/AndroidManifest.xml
 
       - name: Create Floating Service and Java Classes
-
         run: |
-
           cat << 'EOF' > app/src/main/java/com/iqra/floating/ScreenTextService.java
-
           package com.iqra.floating;
-
           import android.accessibilityservice.AccessibilityService;
-
           import android.view.accessibility.AccessibilityEvent;
-
           import android.view.accessibility.AccessibilityNodeInfo;
 
-
-
           public class ScreenTextService extends AccessibilityService {
-
               private static String lastText = "";
-
               public static String getLastCapturedScreenText() { return lastText; }
-
               @Override
-
               public void onAccessibilityEvent(AccessibilityEvent event) {
-
                   AccessibilityNodeInfo root = getRootInActiveWindow();
-
                   if (root == null) return;
-
                   StringBuilder sb = new StringBuilder();
-
                   walk(root, sb);
-
                   String res = sb.toString().trim();
-
                   if (!res.isEmpty()) lastText = res;
-
               }
-
               private void walk(AccessibilityNodeInfo n, StringBuilder sb) {
-
                   if (n == null) return;
-
                   if (n.getPackageName() != null && n.getPackageName().toString().contains("com.iqra.floating")) return;
-
                   CharSequence t = n.getText();
-
                   if (t != null && t.length() > 1) sb.append(t.toString().trim()).append("\n\n");
-
                   for (int i = 0; i < n.getChildCount(); i++) walk(n.getChild(i), sb);
-
               }
-
               @Override public void onInterrupt() {}
-
           }
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/java/com/iqra/floating/FloatingOverlayService.java
-
           package com.iqra.floating;
-
           import android.app.Service;
-
           import android.content.*;
-
           import android.graphics.*;
-
           import android.graphics.drawable.GradientDrawable;
-
           import android.os.*;
-
           import android.provider.Settings;
-
           import android.speech.tts.TextToSpeech;
-
           import android.util.TypedValue;
-
           import android.view.*;
-
           import android.widget.*;
-
           import java.util.Locale;
-
-
 
           public class FloatingOverlayService extends Service {
-
               public static final String EXTRA_TEXT = "extra_text";
-
               private WindowManager wm;
-
               private View rootView;
-
               private LinearLayout cardLayout;
-
               private TextView bubbleView, statusLabel, volPercentLabel;
-
               private EditText textBox;
-
               private Button muteBtn;
-
               private SeekBar volSeekBar;
-
               private TextToSpeech tts;
-
               private float currentVolume = 1.0f, lastNonZeroVolume = 1.0f;
-
               private boolean isMuted = false;
 
-
-
               @Override
-
               public void onCreate() {
-
                   super.onCreate();
-
                   wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-
                   tts = new TextToSpeech(this, s -> {
-
                       if (s == TextToSpeech.SUCCESS && tts != null) tts.setLanguage(new Locale("ar"));
-
                   });
-
                   buildFloatingUI();
-
               }
-
-
 
               @Override
-
               public int onStartCommand(Intent intent, int flags, int startId) {
-
                   if (intent != null && intent.hasExtra(EXTRA_TEXT)) {
-
                       String txt = intent.getStringExtra(EXTRA_TEXT);
-
                       if (txt != null && !txt.trim().isEmpty() && textBox != null) {
-
                           textBox.setText(txt.trim());
-
                           if (cardLayout != null && bubbleView != null) {
-
                               cardLayout.setVisibility(View.VISIBLE);
-
                               bubbleView.setVisibility(View.GONE);
-
                           }
-
                       }
-
                   }
-
                   return START_STICKY;
-
               }
-
-
 
               private int dp(int v) {
-
                   return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics());
-
               }
-
-
 
               private Button smallBtn(String label) {
-
                   Button b = new Button(this);
-
                   b.setText(label);
-
                   b.setTextColor(Color.WHITE);
-
                   b.setTextSize(11f);
-
                   b.setPadding(dp(6), dp(2), dp(6), dp(2));
-
                   GradientDrawable bg = new GradientDrawable();
-
                   bg.setColor(Color.argb(70, 255, 255, 255));
-
                   bg.setCornerRadius(dp(8));
-
                   bg.setStroke(dp(1), Color.argb(90, 255, 255, 255));
-
                   b.setBackground(bg);
-
                   return b;
-
               }
-
-
 
               private void buildFloatingUI() {
-
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) return;
-
                   int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-
                       ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-
                       : WindowManager.LayoutParams.TYPE_PHONE;
-
                   final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-
                       dp(330), WindowManager.LayoutParams.WRAP_CONTENT, type,
-
                       WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
-
                   params.gravity = Gravity.TOP | Gravity.START;
-
                   params.x = dp(16); params.y = dp(100);
 
-
-
                   LinearLayout container = new LinearLayout(this);
-
                   container.setOrientation(LinearLayout.VERTICAL);
 
-
-
                   cardLayout = new LinearLayout(this);
-
                   cardLayout.setOrientation(LinearLayout.VERTICAL);
-
                   cardLayout.setPadding(dp(12), dp(10), dp(12), dp(12));
-
                   GradientDrawable cardBg = new GradientDrawable();
-
                   cardBg.setColor(Color.argb(190, 15, 39, 61));
-
                   cardBg.setCornerRadius(dp(18));
-
                   cardBg.setStroke(dp(1), Color.argb(130, 127, 225, 212));
-
                   cardLayout.setBackground(cardBg);
 
-
-
                   LinearLayout header = new LinearLayout(this);
-
                   header.setGravity(Gravity.CENTER_VERTICAL);
-
                   TextView title = new TextView(this);
-
                   title.setText("🔊 اقرأ العائم الشفاف");
-
                   title.setTextColor(Color.parseColor("#8ef0e2"));
-
                   title.setTextSize(13f);
-
                   header.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
 
-
-
                   Button minBtn = smallBtn("— تصغير");
-
                   minBtn.setOnClickListener(v -> {
-
                       cardLayout.setVisibility(View.GONE);
-
                       bubbleView.setVisibility(View.VISIBLE);
-
                       params.width = dp(54);
-
                       params.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-
                       wm.updateViewLayout(rootView, params);
-
                   });
-
                   header.addView(minBtn);
 
-
-
                   Button closeBtn = smallBtn("✕");
-
                   closeBtn.setOnClickListener(v -> stopSelf());
-
                   header.addView(closeBtn);
-
                   cardLayout.addView(header);
 
-
-
                   textBox = new EditText(this);
-
                   textBox.setHint("النص المحدد يظهر هنا...");
-
                   textBox.setHintTextColor(Color.argb(150, 220, 240, 240));
-
                   textBox.setTextColor(Color.WHITE);
-
                   textBox.setTextSize(13f);
-
                   textBox.setMinLines(3);
-
                   textBox.setMaxLines(5);
-
                   GradientDrawable boxBg = new GradientDrawable();
-
                   boxBg.setColor(Color.argb(55, 255, 255, 255));
-
                   boxBg.setCornerRadius(dp(10));
-
                   textBox.setBackground(boxBg);
-
                   textBox.setPadding(dp(8), dp(6), dp(8), dp(6));
-
                   LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(-1, -2);
-
                   boxLp.topMargin = dp(8);
-
                   cardLayout.addView(textBox, boxLp);
 
-
-
                   Button remSpacesBtn = new Button(this);
-
                   remSpacesBtn.setText("≡ إلغاء المسافات بين السطور");
-
                   remSpacesBtn.setTextColor(Color.WHITE);
-
                   remSpacesBtn.setTextSize(12f);
-
                   GradientDrawable remBg = new GradientDrawable();
-
                   remBg.setColor(Color.argb(220, 15, 139, 141));
-
                   remBg.setCornerRadius(dp(10));
-
                   remSpacesBtn.setBackground(remBg);
-
                   LinearLayout.LayoutParams remLp = new LinearLayout.LayoutParams(-1, dp(38));
-
                   remLp.topMargin = dp(7);
-
                   remSpacesBtn.setOnClickListener(v -> {
-
                       String raw = textBox.getText() != null ? textBox.getText().toString() : "";
-
                       if (raw.trim().isEmpty()) { statusLabel.setText("البوكس فارغ."); return; }
-
                       String cleaned = raw.replaceAll("(?s)(?:\\s*\\r?\\n\\s*)+", " ").replaceAll("[ \\t]{2,}", " ").trim();
-
                       textBox.setText(cleaned);
-
                       statusLabel.setText("تم إلغاء المسافات بين السطور.");
-
                   });
-
                   cardLayout.addView(remSpacesBtn, remLp);
 
-
-
                   LinearLayout actions = new LinearLayout(this);
-
                   LinearLayout.LayoutParams actLp = new LinearLayout.LayoutParams(-1, -2);
-
                   actLp.topMargin = dp(7);
-
                   Button playBtn = smallBtn("▶ قراءة");
-
                   playBtn.setOnClickListener(v -> {
-
                       String t = textBox.getText() != null ? textBox.getText().toString().trim() : "";
-
                       if (t.isEmpty()) { statusLabel.setText("البوكس فارغ."); return; }
-
                       Bundle b = new Bundle();
-
                       b.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, isMuted ? 0f : currentVolume);
-
                       tts.speak(t, TextToSpeech.QUEUE_FLUSH, b, "utt");
-
                       statusLabel.setText("تُقرأ الفقرة الآن...");
-
                   });
-
                   actions.addView(playBtn, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
-
-
                   Button stopBtn = smallBtn("■ إيقاف");
-
                   stopBtn.setOnClickListener(v -> { if (tts != null) tts.stop(); statusLabel.setText("تم الإيقاف."); });
-
                   actions.addView(stopBtn, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
-
-
                   Button clipBtn = smallBtn("📋 الحافظة");
-
                   clipBtn.setOnClickListener(v -> {
-
                       ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-
                       if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
-
                           CharSequence cs = cm.getPrimaryClip().getItemAt(0).coerceToText(this);
-
                           if (cs != null) { textBox.setText(cs.toString().trim()); statusLabel.setText("تم لصق الحافظة."); }
-
                       }
-
                   });
-
                   actions.addView(clipBtn, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
-
-
                   Button scrBtn = smallBtn("📺 الشاشة");
-
                   scrBtn.setOnClickListener(v -> {
-
                       String s = ScreenTextService.getLastCapturedScreenText();
-
                       if (s != null && !s.isEmpty()) { textBox.setText(s); statusLabel.setText("تم جلب نص الشاشة."); }
-
                       else statusLabel.setText("فعّل خدمة قراءة الشاشة أولاً.");
-
                   });
-
                   actions.addView(scrBtn, new LinearLayout.LayoutParams(0, dp(36), 1f));
-
                   cardLayout.addView(actions, actLp);
 
-
-
                   LinearLayout volRow = new LinearLayout(this);
-
                   volRow.setGravity(Gravity.CENTER_VERTICAL);
-
                   LinearLayout.LayoutParams volLp = new LinearLayout.LayoutParams(-1, -2);
-
                   volLp.topMargin = dp(7);
-
                   muteBtn = smallBtn("🔊");
-
                   muteBtn.setOnClickListener(v -> applyVol(isMuted || currentVolume == 0f ? (lastNonZeroVolume > 0f ? lastNonZeroVolume : 1f) : 0f));
-
                   volRow.addView(muteBtn, new LinearLayout.LayoutParams(dp(42), dp(34)));
 
-
-
                   volSeekBar = new SeekBar(this);
-
                   volSeekBar.setMax(100);
-
                   volSeekBar.setProgress(100);
-
                   volSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-
                       @Override public void onProgressChanged(SeekBar s, int p, boolean u) { if (u) applyVol(p / 100f); }
-
                       @Override public void onStartTrackingTouch(SeekBar s) {}
-
                       @Override public void onStopTrackingTouch(SeekBar s) {}
-
                   });
-
                   volRow.addView(volSeekBar, new LinearLayout.LayoutParams(0, -2, 1f));
 
-
-
                   volPercentLabel = new TextView(this);
-
                   volPercentLabel.setText("100%");
-
                   volPercentLabel.setTextColor(Color.WHITE);
-
                   volPercentLabel.setTextSize(11f);
-
                   volRow.addView(volPercentLabel);
-
                   cardLayout.addView(volRow, volLp);
 
-
-
                   statusLabel = new TextView(this);
-
                   statusLabel.setText("جاهز للقراءة وإلغاء المسافات بين السطور.");
-
                   statusLabel.setTextColor(Color.parseColor("#b8ece5"));
-
                   statusLabel.setTextSize(11f);
-
                   cardLayout.addView(statusLabel);
 
-
-
                   bubbleView = new TextView(this);
-
                   bubbleView.setText("🔊");
-
                   bubbleView.setTextSize(20f);
-
                   bubbleView.setGravity(Gravity.CENTER);
-
                   GradientDrawable bubBg = new GradientDrawable();
-
                   bubBg.setShape(GradientDrawable.OVAL);
-
                   bubBg.setColor(Color.argb(200, 15, 139, 141));
-
                   bubbleView.setBackground(bubBg);
-
                   bubbleView.setVisibility(View.GONE);
-
                   bubbleView.setOnClickListener(v -> {
-
                       bubbleView.setVisibility(View.GONE);
-
                       cardLayout.setVisibility(View.VISIBLE);
-
                       params.width = dp(330);
-
                       params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-
                       wm.updateViewLayout(rootView, params);
-
                   });
-
-
 
                   container.addView(cardLayout);
-
                   container.addView(bubbleView, new LinearLayout.LayoutParams(dp(52), dp(52)));
 
-
-
                   View.OnTouchListener drag = new View.OnTouchListener() {
-
                       int ix, iy; float tx, ty; boolean moved;
-
                       @Override public boolean onTouch(View v, MotionEvent e) {
-
                           if (e.getAction() == MotionEvent.ACTION_DOWN) {
-
                               ix = params.x; iy = params.y; tx = e.getRawX(); ty = e.getRawY(); moved = false;
-
                               return v == header;
-
                           } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
-
                               int dx = (int)(e.getRawX() - tx), dy = (int)(e.getRawY() - ty);
-
                               if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved = true;
-
                               params.x = ix + dx; params.y = iy + dy;
-
                               wm.updateViewLayout(rootView, params);
-
                               return true;
-
                           } else if (e.getAction() == MotionEvent.ACTION_UP && !moved && v == bubbleView) {
-
                               v.performClick(); return true;
-
                           }
-
                           return v == header;
-
                       }
-
                   };
-
                   header.setOnTouchListener(drag);
-
                   bubbleView.setOnTouchListener(drag);
-
                   rootView = container;
-
                   wm.addView(rootView, params);
-
               }
-
-
 
               private void applyVol(float v) {
-
                   currentVolume = Math.max(0f, Math.min(1f, v));
-
                   int pct = Math.round(currentVolume * 100f);
-
                   isMuted = (pct == 0);
-
                   if (currentVolume > 0f) lastNonZeroVolume = currentVolume;
-
                   if (volSeekBar != null && volSeekBar.getProgress() != pct) volSeekBar.setProgress(pct);
-
                   if (volPercentLabel != null) volPercentLabel.setText(pct + "%");
-
                   if (muteBtn != null) muteBtn.setText(isMuted ? "🔇" : (pct < 50 ? "🔉" : "🔊"));
-
               }
-
-
 
               @Override public void onDestroy() {
-
                   if (tts != null) { tts.stop(); tts.shutdown(); }
-
                   if (wm != null && rootView != null) wm.removeView(rootView);
-
                   super.onDestroy();
-
               }
-
               @Override public IBinder onBind(Intent i) { return null; }
-
           }
-
           EOF
-
-
 
       - name: Create MainActivity and Build APK
-
         run: |
-
           cat << 'EOF' > app/src/main/java/com/iqra/floating/MainActivity.java
-
           package com.iqra.floating;
-
           import android.app.Activity;
-
           import android.content.*;
-
           import android.net.Uri;
-
           import android.os.*;
-
           import android.provider.Settings;
-
           import android.speech.tts.TextToSpeech;
-
           import android.webkit.*;
-
           import java.util.Locale;
 
-
-
           public class MainActivity extends Activity {
-
               protected WebView webView;
-
               protected TextToSpeech tts;
-
               protected float currentVolume = 1.0f;
-
               protected String pendingText = "";
 
-
-
               @Override
-
               protected void onCreate(Bundle savedInstanceState) {
-
                   super.onCreate(savedInstanceState);
-
                   extractIntentText(getIntent());
-
                   tts = new TextToSpeech(this, s -> {
-
                       if (s == TextToSpeech.SUCCESS && tts != null) tts.setLanguage(new Locale("ar"));
-
                   });
-
                   webView = new WebView(this);
-
                   WebSettings ws = webView.getSettings();
-
                   ws.setJavaScriptEnabled(true);
-
                   ws.setDomStorageEnabled(true);
-
                   webView.setWebViewClient(new WebViewClient() {
-
                       @Override public void onPageFinished(WebView v, String u) {
-
                           if (pendingText != null && !pendingText.isEmpty()) sendToBox(pendingText);
-
                       }
-
                   });
-
                   webView.addJavascriptInterface(new Bridge(), "AndroidApp");
-
                   setContentView(webView);
-
                   webView.loadUrl("file:///android_asset/app.html");
-
               }
-
-
 
               protected void extractIntentText(Intent i) {
-
                   if (i == null) return;
-
                   if (Intent.ACTION_PROCESS_TEXT.equals(i.getAction())) {
-
                       CharSequence cs = i.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT);
-
                       if (cs != null) pendingText = cs.toString();
-
                   } else if (Intent.ACTION_SEND.equals(i.getAction())) {
-
                       String s = i.getStringExtra(Intent.EXTRA_TEXT);
-
                       if (s != null) pendingText = s;
-
                   }
-
               }
-
-
 
               protected void sendToBox(String t) {
-
                   String esc = t.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "").replace("\n", "\\n");
-
                   webView.post(() -> webView.evaluateJavascript("if(window.setBoxText)window.setBoxText('" + esc + "');", null));
-
               }
-
-
 
               public class Bridge {
-
                   @JavascriptInterface
-
                   public void speak(String text, float rate, float vol) {
-
                       if (tts == null || text == null) return;
-
                       currentVolume = Math.max(0f, Math.min(1f, vol));
-
                       tts.setSpeechRate(Math.max(0.5f, Math.min(2.0f, rate)));
-
                       Bundle b = new Bundle();
-
                       b.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume);
-
                       tts.speak(text, TextToSpeech.QUEUE_FLUSH, b, "main_utt");
-
                   }
-
                   @JavascriptInterface public void stop() { if (tts != null) tts.stop(); }
-
                   @JavascriptInterface
-
                   public void startFloating(String text) {
-
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(MainActivity.this)) {
-
                           startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
-
                           return;
-
                       }
-
                       Intent svc = new Intent(MainActivity.this, FloatingOverlayService.class);
-
                       if (text != null) svc.putExtra(FloatingOverlayService.EXTRA_TEXT, text);
-
                       startService(svc);
-
                   }
-
                   @JavascriptInterface
-
                   public void openAccessibility() {
-
                       startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-
                   }
-
               }
-
           }
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/java/com/iqra/floating/FloatingReaderActivity.java
-
           package com.iqra.floating;
-
           import android.content.Intent;
-
           import android.os.*;
-
           import android.provider.Settings;
 
-
-
           public class FloatingReaderActivity extends MainActivity {
-
               @Override
-
               protected void onCreate(Bundle savedInstanceState) {
-
                   super.onCreate(savedInstanceState);
-
                   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-
                       Intent svc = new Intent(this, FloatingOverlayService.class);
-
                       if (pendingText != null) svc.putExtra(FloatingOverlayService.EXTRA_TEXT, pendingText);
-
                       startService(svc);
-
                       finish();
-
                   }
-
               }
-
           }
-
           EOF
-
-
 
           cat << 'EOF' > app/src/main/assets/app.html
-
           <!doctype html>
-
           <html lang="ar" dir="rtl">
-
           <head>
-
             <meta charset="utf-8">
-
             <meta name="viewport" content="width=device-width,initial-scale=1">
-
             <title>اقرأ العائم</title>
-
             <style>
-
               *{box-sizing:border-box}
-
               body{margin:0;padding:16px;background:#f2f7f9;color:#102a43;font-family:sans-serif}
-
               .card{background:#fff;border:1px solid #d5e2e8;border-radius:16px;padding:14px;margin-bottom:12px}
-
               h2{margin:0 0 10px;font-size:16px}
-
               textarea{width:100%;min-height:130px;border:1px solid #cbdbe2;border-radius:11px;padding:10px;font-size:14px;line-height:1.7}
-
               button{width:100%;min-height:42px;border:0;border-radius:11px;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px}
-
               .btn-teal{background:#0f8b8d;color:#fff}
-
               .btn-soft{background:#e4f5f3;color:#076b70;border:1px solid #0f8b8d}
-
               .vol-row{display:flex;align-items:center;gap:8px;margin-top:10px}
-
               input[type=range]{flex:1;accent-color:#0f8b8d}
-
               #status{font-size:12px;color:#076b70;margin-top:8px;font-weight:700}
-
             </style>
-
           </head>
-
           <body>
-
             <div class="card">
-
               <h2>🔊 تطبيق اقرأ العائم للهاتف</h2>
-
               <button class="btn-teal" onclick="if(window.AndroidApp)AndroidApp.startFloating(document.getElementById('box').value)">🪟 تشغيل النافذة العائمة الشفافة</button>
-
               <button class="btn-soft" onclick="if(window.AndroidApp)AndroidApp.openAccessibility()">📺 تفعيل قراءة الشاشة بدون نسخ</button>
-
             </div>
-
             <div class="card">
-
               <h2>صندوق النص</h2>
-
               <textarea id="box" placeholder="النص المحدد يظهر هنا..."></textarea>
-
               <button class="btn-soft" onclick="removeSpaces()">≡ إلغاء المسافات بين السطور بضغطة زر</button>
-
               <button class="btn-teal" onclick="playText()">▶ تشغيل القراءة</button>
-
               <button class="btn-soft" onclick="if(window.AndroidApp)AndroidApp.stop()">■ إيقاف</button>
-
               <div class="vol-row">
-
                 <button style="width:44px;margin:0" id="muteBtn" onclick="toggleMute()">🔊</button>
-
                 <span>الصوت</span>
-
                 <input id="vol" type="range" min="0" max="100" value="100" oninput="setVol(this.value)">
-
                 <span id="volVal">100%</span>
-
               </div>
-
               <div id="status">جاهز</div>
-
             </div>
-
             <script>
-
               let currentVol = 1, lastVol = 1, muted = false;
-
               function removeSpaces() {
-
                 const b = document.getElementById('box');
-
                 b.value = b.value.replace(/(?:\s*\r?\n\s*)+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim();
-
                 document.getElementById('status').textContent = 'تم إلغاء المسافات بين السطور.';
-
               }
-
               function setVol(v) {
-
                 const p = Number(v);
-
                 currentVol = p / 100;
-
                 muted = (p === 0);
-
                 if (currentVol > 0) lastVol = currentVol;
-
                 document.getElementById('vol').value = p;
-
                 document.getElementById('volVal').textContent = p + '%';
-
                 document.getElementById('muteBtn').textContent = muted ? '🔇' : (p < 50 ? '🔉' : '🔊');
-
               }
-
               function toggleMute() {
-
                 setVol(muted || currentVol === 0 ? Math.round((lastVol || 1) * 100) : 0);
-
               }
-
               function playText() {
-
                 const t = document.getElementById('box').value.trim();
-
                 if (window.AndroidApp && t) AndroidApp.speak(t, 1.0, muted ? 0 : currentVol);
-
               }
-
               window.setBoxText = function(t) { document.getElementById('box').value = t; };
-
             </script>
-
           </body>
-
           </html>
-
           EOF
 
-
-
       - uses: actions/setup-java@v4
-
         with:
-
           java-version: '17'
-
           distribution: 'temurin'
-
       - uses: gradle/actions/setup-gradle@v3
-
         with:
-
           gradle-version: '8.5'
-
       - name: Assemble Debug APK
-
         run: gradle assembleDebug --no-daemon
-
       - uses: actions/upload-artifact@v4
-
         with:
-
           name: Iqra-Floating-Android-APK
-
           path: app/build/outputs/apk/debug/app-debug.apk
-
